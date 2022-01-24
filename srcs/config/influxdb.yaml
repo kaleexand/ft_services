@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: influx-service
+  labels:
+    app: influx
+spec:
+  selector:
+    app: influx
+  ports:
+  - name: influx
+    port: 8086
+    protocol: TCP
+    targetPort: 8086
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: influx-deployment
+  labels:
+    app: influx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influx
+  template:
+    metadata:
+      labels:
+        app: influx
+    spec:
+      containers:
+      - image: influx_image
+        name: influx
+        imagePullPolicy: Never
+        ports:
+        - name: influx
+          containerPort: 8086
+        volumeMounts:
+        - name: influx-persistent-storage
+          mountPath: /root/.influxdb
+        - name: dockersock
+          mountPath: /var/run/docker.sock
+      volumes:
+      - name: influx-persistent-storage
+        persistentVolumeClaim:
+          claimName: influx-pv-claim
+      - name: dockersock
+        hostPath:
+          path: /var/run/docker.sock
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: influx-pv-claim
+  labels:
+    app: influx
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512Mi
